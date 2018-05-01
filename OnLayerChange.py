@@ -1,6 +1,12 @@
 from ..Script import Script
 
 
+MESSAGE = """;TYPE:CUSTOM
+;added code by post processing
+;script: OnLayerChange.py action no: {0}
+"""
+
+
 class OnLayerChange(Script):
     def __init__(self):
         super().__init__()
@@ -37,13 +43,12 @@ class OnLayerChange(Script):
 
                 try:
                     layer_no = int(line[len(";LAYER:"):])
-                except ValueError: #Couldn't cast to int. Something is wrong with this g-code data.
+                except ValueError:    
+                    # Couldn't cast to int. Something is wrong with this g-code data.
                     continue
 
                 action_no = layer_no % no_of_actions
-                prepend_gcode = ";TYPE:CUSTOM\n"
-                prepend_gcode += ";added code by post processing\n"
-                prepend_gcode += ";script: OnLayerChange.py action no: {0}\n".format(action_no)
+                prepend_gcode = MESSAGE.format(action_no)
                 prepend_gcode += action[action_no].format(layer_no) + "\n"
 
                 layer = prepend_gcode + layer
