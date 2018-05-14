@@ -7,6 +7,8 @@ MESSAGE = """;TYPE:CUSTOM
 ;DBG: curr temp={0}, start temp={1}, tot layers: {2}
 """
 
+LAYER_COUNT = ";LAYER_COUNT:"
+LAYER = ";LAYER:"
 
 class CoolBed(Script):
     def __init__(self):
@@ -68,7 +70,7 @@ class CoolBed(Script):
     def on_layer_count(self, line):
         # this is called only once
         try:
-            self.no_of_layers = int(line[len(";LAYER_COUNT:"):])
+            self.no_of_layers = int(line[len(LAYER_COUNT):])
         except ValueError:
             # Couldn't cast to int. Something is wrong with this g-code data.
             return
@@ -95,19 +97,18 @@ class CoolBed(Script):
 
     def on_layer(self, line):
         try:
-            layer_no = int(line[len(";LAYER:"):])
+            layer_no = int(line[len(LAYER):])
         except ValueError:
-            # Couldn't cast to int. Something is wrong with this g-code data.
             return (False, '')
 
-        if layer_no < self.start_layer or self.desired_temperature <= self.end_temperature:
+        if (self.step_layer == 0
+                or layer_no < self.start_layer
+                or self.desired_temperature <= self.end_temperature
+                or layer_no % self.step_layer != 0):
             return (False, '')
 
-        if self.step_layer != 0 and layer_no % self.step_layer == 0:
-            self.desired_temperature -= self.temp_step
-            return (True, 'M140 S{}'.format(self.desired_temperature))
-
-        return (False, '')
+        self.desired_temperature -= self.temp_step
+        return (True, 'M140 S{}'.format(self.desired_temperature))
 
     def execute(self, data: list):
         """data is a list. Each index contains a layer"""
@@ -116,14 +117,13 @@ class CoolBed(Script):
         for index, layer in enumerate(data):
             lines = layer.split("\n")
             for line in lines:
-                if line.startswith(";LAYER_COUNT:"):
+                if line.startswith(LAYER_COUNT):
                     self.on_layer_count(line)
-                    continue
 
-                if line.startswith("M190") or line.startswith("M140"):
+                elif line.startswith("M190") or line.startswith("M140"):
                     self.on_bed_temperature_set(line)
 
-                if line.startswith(";LAYER:"):
+                elif line.startswith(LAYER):
                     insert, action = self.on_layer(line)
 
                     if insert:
