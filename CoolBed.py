@@ -13,12 +13,12 @@ class CoolBed(Script):
         super().__init__()
 
         self.temp_step = 1.0
+        self.temp_offset = 0.0
         self.no_of_layers = 0
         self.start_layer = 0
         self.is_percent = False
         self.end_temperature = 0
-        self.start_temperature = 0
-        self.current_temparature = 0
+        self.start_temperature = 0.0
         self.step_layer = 0
 
     def getSettingDataString(self):
@@ -47,13 +47,13 @@ class CoolBed(Script):
                 {
                     "label": "End temperature",
                     "description": "Final temperature",
-                    "type": "int",
+                    "type": "float",
                     "default_value": 0
                 }
             }
         }"""
 
-    def calc_temp_step(self):
+    def calc_layer_step(self):
         dl = self.no_of_layers - self.start_layer
         dt = self.start_temperature - self.end_temperature
 
@@ -66,6 +66,7 @@ class CoolBed(Script):
         self.end_temperature = self.getSettingValueByKey("temperature")
 
     def on_layer_count(self, line):
+        # this is called only once
         try:
             self.no_of_layers = int(line[len(";LAYER_COUNT:"):])
         except ValueError:
@@ -73,20 +74,23 @@ class CoolBed(Script):
             return
 
         if self.is_percent:
-            percent = 1 / self.start_layer
+            if self.start_layer <= 0 or self.start_layer >= 100:
+                return
+
+            percent = 1.0 / self.start_layer
             self.start_layer = int(self.no_of_layers * percent)
 
-        self.calc_temp_step()
+        self.calc_layer_step()
 
     def on_bed_temperature_set(self, line):
+        # M140 S60
         pos = line.index('S')
         try:
             self.start_temperature = float(line[pos+1:])
         except ValueError:
-            self.start_temperature = 999
             return
 
-        self.calc_temp_step()
+        self.calc_layer_step()
 
     def on_layer(self, line):
         try:
@@ -95,15 +99,14 @@ class CoolBed(Script):
             # Couldn't cast to int. Something is wrong with this g-code data.
             return (False, '')
 
-        if layer_no < self.start_layer :
+        if layer_no < self.start_layer:
             return (False, '')
 
         if self.step_layer != 0 and layer_no % self.step_layer == 0:
-            self.current_temparature += self.temp_step
-            return (True, 'M140 S{}'.format(self.start_temperature - self.current_temparature))
+            self.temp_offset += self.temp_step
+            return (True, 'M140 S{}'.format(self.start_temperature - self.temp_offset))
 
         return (False, '')
-
 
     def execute(self, data: list):
         """data is a list. Each index contains a layer"""
@@ -123,7 +126,7 @@ class CoolBed(Script):
                     insert, action = self.on_layer(line)
 
                     if insert:
-                        prepend_gcode = MESSAGE.format(self.current_temparature, self.start_temperature, self.no_of_layers)
+                        prepend_gcode = MESSAGE.format(self.temp_offset, self.start_temperature, self.no_of_layers)
                         prepend_gcode += action + "\n"
 
                         layer = prepend_gcode + layer
