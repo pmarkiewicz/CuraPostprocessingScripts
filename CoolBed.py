@@ -10,6 +10,7 @@ MESSAGE = """;TYPE:CUSTOM
 LAYER_COUNT = ";LAYER_COUNT:"
 LAYER = ";LAYER:"
 
+
 class CoolBed(Script):
     def __init__(self):
         super().__init__()
@@ -127,12 +128,11 @@ class CoolBed(Script):
                     insert, action = self.on_layer(line)
 
                     if insert:
-                        prepend_gcode = MESSAGE.format(self.desired_temperature, self.start_temperature, self.no_of_layers)
+                        prepend_gcode = MESSAGE.format(self.desired_temperature, 
+                                                       self.start_temperature, 
+                                                       self.no_of_layers)
                         prepend_gcode += action + "\n"
 
-                        layer = prepend_gcode + layer
-
-                        # Override the data of this layer with the
-                        # modified data
-                        data[index] = layer
+                        # Override the data of this layer with the modified data
+                        data[index] = prepend_gcode + layer
         return data
