@@ -100,16 +100,16 @@ class CoolBed(Script):
         try:
             layer_no = int(line[len(LAYER):])
         except ValueError:
-            return (False, '')
+            return None
 
         if (self.step_layer == 0
                 or layer_no < self.start_layer
                 or self.desired_temperature <= self.end_temperature
                 or layer_no % self.step_layer != 0):
-            return (False, '')
+            return None
 
         self.desired_temperature -= self.temp_step
-        return (True, 'M140 S{}'.format(self.desired_temperature))
+        return 'M140 S{}'.format(self.desired_temperature)
 
     def execute(self, data: list):
         """data is a list. Each index contains a layer"""
@@ -125,9 +125,9 @@ class CoolBed(Script):
                     self.on_bed_temperature_set(line)
 
                 elif line.startswith(LAYER):
-                    insert, action = self.on_layer(line)
+                    action = self.on_layer(line)
 
-                    if insert:
+                    if action:
                         prepend_gcode = MESSAGE.format(self.desired_temperature,
                                                        self.start_temperature,
                                                        self.no_of_layers)
