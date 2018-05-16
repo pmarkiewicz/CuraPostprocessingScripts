@@ -128,8 +128,8 @@ class CoolBed(Script):
                     insert, action = self.on_layer(line)
 
                     if insert:
-                        prepend_gcode = MESSAGE.format(self.desired_temperature, 
-                                                       self.start_temperature, 
+                        prepend_gcode = MESSAGE.format(self.desired_temperature,
+                                                       self.start_temperature,
                                                        self.no_of_layers)
                         prepend_gcode += action + "\n"
 
