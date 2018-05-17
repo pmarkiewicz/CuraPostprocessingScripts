@@ -1,10 +1,9 @@
 from ..Script import Script
 
-
 MESSAGE = """;TYPE:CUSTOM
 ;added code by post processing
 ;script: CoolBed.py
-;DBG: curr temp={0}, start temp={1}, tot layers: {2}
+;DBG: curr temp={0}, start temp={1}, tot layers: {2}, start layer: {3}
 """
 
 LAYER_COUNT = ";LAYER_COUNT:"
@@ -23,6 +22,7 @@ class CoolBed(Script):
         self.end_temperature = 0
         self.start_temperature = 0.0
         self.step_layer = 0
+        self.requested_temperature = 0
 
     def getSettingDataString(self):
         return """{
@@ -49,7 +49,7 @@ class CoolBed(Script):
                 "temperature":
                 {
                     "label": "End temperature",
-                    "description": "Final temperature",
+                    "description": "Final temperature, or if negative difference to initial temperature",
                     "type": "float",
                     "default_value": 0
                 }
@@ -66,7 +66,9 @@ class CoolBed(Script):
     def load_parameters(self):
         self.start_layer = self.getSettingValueByKey("start")
         self.is_percent = self.getSettingValueByKey("percent")
-        self.end_temperature = self.getSettingValueByKey("temperature")
+        self.requested_temperature = self.getSettingValueByKey("temperature")
+        if self.requested_temperature > 0:
+            self.end_temperature = self.requested_temperature
 
     def on_layer_count(self, line):
         # this is called only once
@@ -92,6 +94,9 @@ class CoolBed(Script):
             self.start_temperature = float(line[pos+1:])
         except ValueError:
             return
+
+        if self.requested_temperature < 0:
+            self.end_temperature = self.start_temperature + self.requested_temperature
 
         self.desired_temperature = self.start_temperature
         self.calc_layer_step()
@@ -130,7 +135,8 @@ class CoolBed(Script):
                     if action:
                         prepend_gcode = MESSAGE.format(self.desired_temperature,
                                                        self.start_temperature,
-                                                       self.no_of_layers)
+                                                       self.no_of_layers,
+                                                       self.start_layer)
                         prepend_gcode += action + "\n"
 
                         # Override the data of this layer with the modified data
