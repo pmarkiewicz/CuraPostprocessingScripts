@@ -3,7 +3,7 @@ from ..Script import Script
 MESSAGE = """;TYPE:CUSTOM
 ;added code by post processing
 ;script: CoolBed.py
-;DBG: curr temp={0}, start temp={1}, tot layers: {2}, start layer: {3}
+;DBG: curr temp={0}, start temp={1}, end temp={4}, tot layers: {2}, start layer: {3}
 """
 
 LAYER_COUNT = ";LAYER_COUNT:"
@@ -136,7 +136,8 @@ class CoolBed(Script):
                         prepend_gcode = MESSAGE.format(self.desired_temperature,
                                                        self.start_temperature,
                                                        self.no_of_layers,
-                                                       self.start_layer)
+                                                       self.start_layer,
+                                                       self.end_temperature)
                         prepend_gcode += action + "\n"
 
                         # Override the data of this layer with the modified data
